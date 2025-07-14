@@ -1,0 +1,5 @@
+# Ignore node_modules directory
+node_modules/
+
+# Ignore databaseConfig
+BackEnd/model/databaseConfig.js
