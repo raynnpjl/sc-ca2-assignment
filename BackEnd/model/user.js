@@ -1,6 +1,7 @@
 
 
 const db = require("./databaseConfig");
+const bcrypt = require("bcrypt");
 var config = require('../config.js');
 var jwt = require('jsonwebtoken');
 
@@ -163,44 +164,57 @@ const userDB = {
   },
 
   loginUser: function (username, password, callback) {
-
     var conn = db.getConnection();
-
+  
     conn.connect(function (err) {
       if (err) {
         console.log(err);
-        return callback(err, null);
-      }
-      else {
-        let sql = 'select * from user where username=? and password=?';
-
-        conn.query(sql, [username, password], function (err, result) {
+        return callback(err, null, null);
+      } else {
+        let sql = 'SELECT * FROM user WHERE username = ?';
+  
+        conn.query(sql, [username], function (err, result) {
           conn.end();
-
+  
           if (err) {
             console.log("Err: " + err);
-            return callback(err, null);
+            return callback(err, null, null);
           } else {
-
-            if (result.length == 1) {
-              token = jwt.sign({
-                userid: result[0].userid,
-                type: result[0].type,
-              }, config.key, {
-                expiresIn: 86400 //expires in 24 hrs
+            if (result.length === 1) {
+              const user = result[0];
+  
+              // Compare plaintext password with stored hash
+              bcrypt.compare(password, user.password, function (err, isMatch) {
+                if (err) {
+                  console.log("Bcrypt compare error:", err);
+                  return callback(err, null, null);
+                }
+  
+                if (!isMatch) {
+                  const err2 = new Error("UserID/Password does not match.");
+                  err2.statusCode = 401;
+                  return callback(err2, null, null);
+                }
+  
+                // Password matches, generate JWT
+                const token = jwt.sign(
+                  {
+                    userid: user.userid,
+                    type: user.type,
+                  },
+                  config.key,
+                  { expiresIn: 86400 } // 24 hours
+                );
+  
+                return callback(null, result, token);
               });
-              return callback(null, result, token);
-
             } else {
-
-              var err2 = new Error("UserID/Password does not match.");
-              err2.statusCode = 500;
+              const err2 = new Error("User not found.");
+              err2.statusCode = 401;
               return callback(err2, null, null);
-
             }
           }
         });
-
       }
     });
   },

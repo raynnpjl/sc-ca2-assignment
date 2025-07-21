@@ -3,3 +3,6 @@ node_modules/
 
 # Ignore databaseConfig
 BackEnd/model/databaseConfig.js
+
+# Ignore environment variables file
+BackEnd/.env

@@ -1,2 +1,1 @@
-var secret = '89f48478ofu84hfue8o8eije4'; //your own secret key
-module.exports.key = secret;
+module.exports.key = process.env.SECRET_KEY;

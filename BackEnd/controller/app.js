@@ -25,6 +25,7 @@ const discountDB = require('../model/discount');
 const productImagesDB = require('../model/productimages');
 var verifyToken = require('../auth/verifyToken.js');
 const orderDB = require('../model/orders');
+const bcryptMiddleware = require('../middleware/bcryptMiddleware.js');
 
 var app = express();
 app.options('*', cors());
@@ -178,14 +179,13 @@ app.post('/user/login', function (req, res) {
 });
 
 //Api no. 1 Endpoint: POST /users/ | Add new user
-app.post('/users', (req, res) => {
-
+app.post('/users', bcryptMiddleware.hashPassword, (req, res) => {
     var { username, email, contact, password, profile_pic_url } = req.body;
 
     if(!profile_pic_url){
         profile_pic_url="";
     }
-    userDB.addNewUser(username, email, contact, password, "Customer", profile_pic_url, (err, results) => {
+    userDB.addNewUser(username, email, contact, res.locals.hash, "Customer", profile_pic_url, (err, results) => {
 
         if (err) {
 
