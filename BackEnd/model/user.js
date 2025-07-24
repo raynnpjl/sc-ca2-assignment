@@ -196,17 +196,7 @@ const userDB = {
                   return callback(err2, null, null);
                 }
   
-                // Password matches, generate JWT
-                const token = jwt.sign(
-                  {
-                    userid: user.userid,
-                    type: user.type,
-                  },
-                  config.key,
-                  { expiresIn: 86400 } // 24 hours
-                );
-  
-                return callback(null, result, token);
+                return callback(null, result, null);
               });
             } else {
               const err2 = new Error("User not found.");

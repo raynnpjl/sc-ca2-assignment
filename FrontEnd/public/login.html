@@ -42,27 +42,38 @@
   <script>
     $(document).ready(function () {
 
-      const token = localStorage.getItem('JWT');
-      const userData = localStorage.getItem("User");
+      axios.defaults.withCredentials = true;
 
-      if (userData != null || token != null) window.location.assign(`http://localhost:3001/index.html`)
-      if (userData != null || token != null) return
+      // cheching if user is logged in
+      axios.post(`http://localhost:8081/user/isloggedin`)
+        .then(({ data }) => {
+          // redirect to home page if logged in
+          window.location.assign(`http://localhost:3001/index.html`);
+        })
+        .catch((err) => {
+          // user is not logged in stay on login page
+          console.log("User not logged in");
+        });
 
       $("#signin").click(function () {
         let password = $("#password").val();
         let username = $("#username").val();
         let data = { password, username }
-        // var data = `{"username": "${username}","password": "${password}"}`
 
         axios.post(`http://localhost:8081/user/login`, data).then(({ data }) => {
           if (data != null) {
             $("#feedback").html("Logged in!").removeClass("text-danger").addClass("text-success")
-            localStorage.setItem("JWT", data.token)
-            localStorage.setItem("User", data.UserData);
             window.location.assign("http://localhost:3001/index.html")
-          } else
-            $("#feedback").html("Wrong Login Credentials Provided")
-        }).catch((err) => $("#feedback").html("Wrong Login Credentials Provided"));
+          } else {
+            $("#feedback").html("Wrong Login Credentials Provided").addClass("text-danger").removeClass("text-success")
+          }
+        }).catch((err) => {
+          let errorMessage = "Wrong Login Credentials Provided";
+          if (err.response && err.response.data && err.response.data.message) {
+            errorMessage = err.response.data.message;
+          }
+          $("#feedback").html(errorMessage).addClass("text-danger").removeClass("text-success");
+        });
         return false;
       });
 
@@ -98,7 +109,7 @@
         axios.post(`http://localhost:8081/users`, data).then((data) => {
           console.log(data)
           $("#regFeedback").removeClass("text-danger").addClass("text-success")
-          $("#regFeedback").html("Success!")
+          $("#regFeedback").html("Success! You can now login with your credentials.")
         }).catch((err) => {
           let errorMessage = "";
           if (err.response) {

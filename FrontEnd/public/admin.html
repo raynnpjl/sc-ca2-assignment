@@ -37,208 +37,144 @@
 <body>
 
   <script>
-    $(document).ready(function () {
-      const token = localStorage.getItem('JWT');
+  $(document).ready(function () {
+    // hide the main content initially
+    $("#container").hide();
 
-      $("#container").hide()
+    // check if user is logged in and is admin
+    axios.post(`http://localhost:8081/user/isloggedin`)
+      .then(({ data }) => {
+        const { type } = data;
 
-      const userData = localStorage.getItem("User");
-
-      if (userData == null) {
-        $("#userprofile").hide()
-        $("#logincontainer").show()
-        $("#logoutcontainer").hide()
-        $("#admin").hide()
-      }
-
-      if (userData == null) window.location.assign(`http://localhost:3001/index.html`)
-      if (userData == null) return
-
-      const { userid, type } = JSON.parse(userData)[0]
-      if (type.toLowerCase() != "admin") window.location.assign(`http://localhost:3001/index.html`)
-      if (type.toLowerCase() != "admin") return
-
-      $("#container").show()
-
-      axios.post(`http://localhost:8081/user/isloggedin`, ({ userid, type }), {
-        headers: { 'authorization': 'Bearer ' + token }
-      }).then(({ data }) => {
-        if (data) {
-          let { userid, type } = data
-          if (type.toLowerCase() != "admin")
-            window.location.assign("http://localhost:3001/index.html")
+        if (!type || type.toLowerCase() !== "admin") {
+          alert("Admin access only.");
+          window.location.assign(`http://localhost:3001/index.html`);
+          return;
         }
-      }).catch((err) => {
-        window.location.assign("http://localhost:3001/index.html")
+
+        // user is admin
+        $("#container").show();
+      })
+      .catch(() => {
+        alert("Please log in.");
+        $("#userprofile").hide();
+        $("#logincontainer").show();
+        $("#logoutcontainer").hide();
+        $("#admin").hide();
+        window.location.assign(`http://localhost:3001/login.html`);
       });
 
-      //Load category drop down menu
-      axios.get(`http://localhost:8081/category`).then(({ data }) => {
-        let divCatDropdown = ""
-        if (data != null) {
-          data.forEach(({ categoryid, category, description }) => {
-            divCatDropdown += `<option value="${categoryid}">${category}</option>`
-          });
-        } else {
-          window.alert("Error occured...")
-        }
-        $("#prodCat").append(divCatDropdown);
-      }).catch((err) => { console.log(err) });
-
-      //Change label on file change
-      $('#prodImage').on('change', function () {
-        let file = $('#prodImage').prop('files')[0];
-        $('#fileLabel').html(file.name)
-      });
-
-      $("#catAdd").click((e) => {
-        e.preventDefault()
-        const category = $("#catName").val()
-        const description = $("#catDescription").val()
-
-        if (category == "")
-          $("#catName").addClass("is-invalid").removeClass("is-valid")
-        else
-          $("#catName").removeClass("is-invalid").addClass("is-valid")
-
-        if (description == "")
-          $("#catDescription").addClass("is-invalid").removeClass("is-valid")
-        else
-          $("#catDescription").removeClass("is-invalid").addClass("is-valid")
-
-        if (category == "" || description == "") return
-
-        var data = { category, description }
-        console.log(data)
-        axios.post(`http://localhost:8081/category`, data, {
-          headers: { 'authorization': 'Bearer ' + token }
-        }).then((data) => {
-          if (data) {
-            $("#catName").removeClass("is-valid")
-            $("#catDescription").removeClass("is-valid")
-
-            $("#catAddFeedback").addClass("text-success").removeClass("text-danger")
-            $("#catAddFeedback").html("Category successfully added")
-          } else {
-            $("#catAddFeedback").addClass("text-danger")
-            $("#catAddFeedback").html("Error!")
-          }
-        }).catch((err) => {
-          let errorMessage = "";
-          if (err.response) {
-            const { data, status, headers } = err.response
-            errorMessage = data.message
-          } else {
-            errorMessage = "Error!"
-          }
-          $("#catAddFeedback").addClass("text-danger").removeClass("text-success")
-          $("#catAddFeedback").html(errorMessage)
+    // Load category drop down menu
+    axios.get(`http://localhost:8081/category`).then(({ data }) => {
+      let divCatDropdown = "";
+      if (data) {
+        data.forEach(({ categoryid, category }) => {
+          divCatDropdown += `<option value="${categoryid}">${category}</option>`;
         });
+      } else {
+        alert("Error occurred...");
+      }
+      $("#prodCat").append(divCatDropdown);
+    }).catch(console.log);
 
-      })
+    // Change label on file change
+    $('#prodImage').on('change', function () {
+      const file = this.files[0];
+      $('#fileLabel').text(file.name);
+    });
 
-      $("#prodAdd").click((e) => {
-        e.preventDefault()
-        const name = $("#prodName").val()
-        const description = $("#prodDescription").val()
-        const brand = $("#prodBrand").val()
-        const price = $("#prodPrice").val()
-        const categoryid = $("#prodCat").val()
-        const file = $('#prodImage').prop('files')[0];
+    // Add category
+    $("#catAdd").click((e) => {
+      e.preventDefault();
+      const category = $("#catName").val();
+      const description = $("#catDescription").val();
 
-        if (name == "") $("#prodName").addClass("is-invalid").removeClass("is-valid")
-        else $("#prodName").removeClass("is-invalid").addClass("is-valid")
+      // validation
+      category === "" ? $("#catName").addClass("is-invalid").removeClass("is-valid")
+                      : $("#catName").removeClass("is-invalid").addClass("is-valid");
 
-        if (brand == "") $("#prodBrand").addClass("is-invalid").removeClass("is-valid")
-        else $("#prodBrand").removeClass("is-invalid").addClass("is-valid")
+      description === "" ? $("#catDescription").addClass("is-invalid").removeClass("is-valid")
+                         : $("#catDescription").removeClass("is-invalid").addClass("is-valid");
 
-        if (description == "") $("#prodDescription").addClass("is-invalid").removeClass("is-valid")
-        else $("#prodDescription").removeClass("is-invalid").addClass("is-valid")
+      if (!category || !description) return;
 
-        if (price == "" || isNaN(price)) $("#prodPrice").addClass("is-invalid").removeClass("is-valid")
-        else $("#prodPrice").removeClass("is-invalid").addClass("is-valid")
-
-        if (categoryid == "" || isNaN(categoryid)) $("#prodCat").addClass("is-invalid").removeClass("is-valid")
-        else $("#prodCat").removeClass("is-invalid").addClass("is-valid")
-
-        if (file == undefined) $("#prodImage").addClass("is-invalid").removeClass("is-valid")
-        else $("#prodImage").removeClass("is-invalid").addClass("is-valid")
-
-        if (name == "" || brand == "" || description == "" || price == "" || isNaN(price) || categoryid == "" || isNaN(categoryid) || file == undefined) return
-
-        let data = JSON.stringify({ name, price, description, brand, categoryid })
-        let dataImage = new FormData()
-        dataImage.append("image", file)
-
-        //Create product
-        $.ajax({
-          headers: { 'authorization': 'Bearer ' + token },
-          url: 'http://localhost:8081/product',
-          type: 'POST',
-          data: data,
-          contentType: 'application/json',
-          dataType: 'json',
-          success: function ({ productid }, textStatus, xhr) {
-            if (data != null) {
-
-              axios.post(`http://localhost:8081/product/${productid}/image`, dataImage, {
-                headers: { "authorization": "Bearer " + token }
-              }).then(() => {
-                document.getElementById("prodForm").reset();
-
-                $("#prodName").removeClass("is-valid")
-                $("#prodBrand").removeClass("is-valid")
-                $("#prodDescription").removeClass("is-valid")
-                $("#prodPrice").removeClass("is-valid")
-                $("#prodCat").removeClass("is-valid")
-                $("#prodImage").removeClass("is-valid")
-
-                $('#prodImage').removeProp('files')
-                $('#fileLabel').html('Choose file')
-
-                $("#prodAddFeedback").addClass("text-success").removeClass("text-danger")
-                $("#prodAddFeedback").html("Product successfully added")
-                // location.reload()
-
-
-
-              }).catch((err) => {
-                let errorMessage = "";
-                if (err.response) {
-                  const { data, status, headers } = err.response
-                  errorMessage = data.message
-                } else {
-                  errorMessage = "Error!"
-                }
-                $("#prodAddFeedback").addClass("text-danger").removeClass("text-success")
-                $("#prodAddFeedback").html(errorMessage)
-
-                axios.delete(`http://localhost:8081/product/${productid}`, {
-                  headers: { 'authorization': 'Bearer ' + token }
-                }).then((data) => {
-                }).catch((err) => {
-                });
-              });
-
-            } else {
-              $("#prodAddFeedback").addClass("text-danger")
-              $("#prodAddFeedback").html("Error!")
-            }
-          },
-          error: function (xhr, textStatus, errorThrown) {
-            console.log(errorThrown)
-            $("#prodAddFeedback").addClass("text-danger")
-            if (errorThrown)
-              $("#prodAddFeedback").html(errorThrown)
-            else
-              $("#prodAddFeedback").html("Error!")
-          }
+      axios.post(`http://localhost:8081/category`, { category, description })
+        .then(() => {
+          $("#catName, #catDescription").removeClass("is-valid");
+          $("#catAddFeedback").addClass("text-success").removeClass("text-danger").html("Category successfully added");
         })
-      })
-     
+        .catch((err) => {
+          const msg = err.response?.data?.message || "Error!";
+          $("#catAddFeedback").addClass("text-danger").removeClass("text-success").html(msg);
+        });
+    });
 
-    })
+    // Add product
+    $("#prodAdd").click((e) => {
+      e.preventDefault();
+      const name = $("#prodName").val();
+      const description = $("#prodDescription").val();
+      const brand = $("#prodBrand").val();
+      const price = $("#prodPrice").val();
+      const categoryid = $("#prodCat").val();
+      const file = $('#prodImage').prop('files')[0];
 
+      // validation
+      const fields = [
+        { id: "#prodName", value: name },
+        { id: "#prodBrand", value: brand },
+        { id: "#prodDescription", value: description },
+        { id: "#prodPrice", value: price, check: isNaN(price) },
+        { id: "#prodCat", value: categoryid, check: isNaN(categoryid) },
+        { id: "#prodImage", value: file }
+      ];
+
+      let hasError = false;
+      fields.forEach(({ id, value, check }) => {
+        if (value === "" || check) {
+          $(id).addClass("is-invalid").removeClass("is-valid");
+          hasError = true;
+        } else {
+          $(id).removeClass("is-invalid").addClass("is-valid");
+        }
+      });
+
+      if (hasError) return;
+
+      const data = JSON.stringify({ name, price, description, brand, categoryid });
+      const dataImage = new FormData();
+      dataImage.append("image", file);
+
+      // create product
+      $.ajax({
+        url: 'http://localhost:8081/product',
+        type: 'POST',
+        data,
+        contentType: 'application/json',
+        dataType: 'json',
+        success: function ({ productid }) {
+          axios.post(`http://localhost:8081/product/${productid}/image`, dataImage)
+            .then(() => {
+              document.getElementById("prodForm").reset();
+              $(".is-valid").removeClass("is-valid");
+              $('#fileLabel').html('Choose file');
+              $("#prodAddFeedback").addClass("text-success").removeClass("text-danger").html("Product successfully added");
+            })
+            .catch((err) => {
+              const msg = err.response?.data?.message || "Error!";
+              $("#prodAddFeedback").addClass("text-danger").removeClass("text-success").html(msg);
+
+              axios.delete(`http://localhost:8081/product/${productid}`)
+                .catch(() => {});
+            });
+        },
+        error: function (xhr, textStatus, errorThrown) {
+          console.error(errorThrown);
+          $("#prodAddFeedback").addClass("text-danger").html(errorThrown || "Error!");
+        }
+      });
+    });
+  });
   </script>
   <!-- ***** Preloader Start ***** -->
   <div id="preloader">

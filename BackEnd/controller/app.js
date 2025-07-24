@@ -23,34 +23,39 @@ const productDB = require('../model/product');
 const reviewDB = require('../model/review');
 const discountDB = require('../model/discount');
 const productImagesDB = require('../model/productimages');
-var verifyToken = require('../auth/verifyToken.js');
+// var verifyToken = require('../auth/verifyToken.js');
+const { requireAuth, requireAdmin } = require('../auth/verifySession.js');
 const orderDB = require('../model/orders');
 const bcryptMiddleware = require('../middleware/bcryptMiddleware.js');
+const sessionMiddleware = require('../middleware/sessionMiddleware.js');
 
 var app = express();
-app.options('*', cors());
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:3001',
+  credentials: true // allow cookies
+}));
 var urlencodedParser = bodyParser.urlencoded({ extended: false })
 
 app.use(urlencodedParser);
-app.use(bodyParser.json()); //Chunking for json POST
+app.use(bodyParser.json());
 
-//Middleware
 app.use(express.static(path.join(__dirname, '../public/')));
+app.use(sessionMiddleware);
 
 //Get if user is logged in with correct token
-app.post('/user/isloggedin', verifyToken, (req, res) => {
-    if (req.body.userid == req.userid && req.body.type == req.type)
+app.post('/user/isloggedin', (req, res) => {
+    if (req.session.user) {
         res.status(200).json({
-            userid: req.userid,
-            type: req.type,
-        })
-    else
+            userid: req.session.user.userid,
+            type: req.session.user.type
+        });
+    } else {
         res.status(401).json({ Message: "Not logged in" })
+    }
 });
 
 //Get order
-app.get('/order/:userid', verifyToken, (req, res) => {
+app.get('/order/:userid', requireAuth, (req, res) => {
 
     orderDB.getOrder(req.userid, (err, results) => {
         if (err)
@@ -64,30 +69,37 @@ app.get('/order/:userid', verifyToken, (req, res) => {
 });
 
 //Add Order
-app.post('/order', verifyToken, (req, res) => {
+app.post('/order', requireAuth, (req, res) => {
 
-    const { cart, total } = req.body;
+    const cart = req.session.cart;
+    if (!cart || cart.length === 0) {
+        return res.status(400).json({ message: "Cart is empty" });
+    }
 
-    orderDB.addOrder(req.userid, cart, total, (err, results) => {
+    // Calculate total server-side for safety
+    let total = 0;
+    cart.forEach(item => {
+        total += item.price * item.quantity; // or your discounted price logic here
+    });
 
+    orderDB.addOrder(req.userid, JSON.stringify(cart), total, (err, results) => {
         if (err) {
             if (err?.message)
-                res.status(400).json({ message: err?.message })
-
+                res.status(400).json({ message: err?.message });
             else
-                res.status(500).json({ message: "Internal Error" })
+                res.status(500).json({ message: "Internal Error" });
+        } else {
+            // Clear cart after order placed
+            req.session.cart = [];
+
+            res.status(201).json({ orderid: results.insertId });
         }
-
-        //No error, response with productid
-        else
-            res.status(201).json({ orderid: results.insertId })
-
-    })
-
-})
+    });
+});
+ 
 
 //Update product
-app.put('/product/:productid', verifyToken, (req, res) => {
+app.put('/product/:productid', requireAuth, (req, res) => {
 
     const { name, description, categoryid, brand, price } = req.body;
 
@@ -112,7 +124,7 @@ app.put('/product/:productid', verifyToken, (req, res) => {
 
 
 //Delete Review
-app.delete('/review/:reviewid', verifyToken, (req, res) => {
+app.delete('/review/:reviewid', requireAuth, (req, res) => {
 
     reviewDB.deleteReview(req.params.reviewid, req.userid, (err, results) => {
         if (err)
@@ -166,16 +178,32 @@ app.post('/user/login', function (req, res) {
 
     userDB.loginUser(username, password, function (err, result, token) {
         if (!err) {
-            res.statusCode = 200;
-            res.setHeader('Content-Type', 'application/json');
-            delete result[0]['password'];//clear the password in json data, do not send back to client
+
+            req.session.user = {
+                userid: result[0].userid,
+                type: result[0].type
+            };
+
             console.log(result[0].username + " logged in");
-            res.json({ success: true, UserData: JSON.stringify(result), token: token, status: 'You are successfully logged in!' });
+            
+            res.status(200).json({ success: 'login successful' });
+
         } else {
             res.status(500);
             res.send("Error Code: " + err.statusCode);
         }
     });
+});
+
+// logout
+app.post('/user/logout', (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      return res.status(500).json({ message: 'Could not log out' });
+    }
+    res.clearCookie('sessionId'); // Clear session cookie
+    res.status(200).json({ message: 'Logged out successfully' });
+  });
 });
 
 //Api no. 1 Endpoint: POST /users/ | Add new user
@@ -241,7 +269,7 @@ app.get('/users/:id', (req, res) => {
 });
 
 //Api no. 4 Endpoint: PUT /users/:id/ | Update info user by userid
-app.put('/users/:id', verifyToken, (req, res) => {
+app.put('/users/:id', requireAuth, (req, res) => {
     const { username, email, contact, password, profile_pic_url, oldpassword } = req.body;
 
     userDB.updateUser(username, email, contact, password, req.type, profile_pic_url, req.userid, oldpassword, (err, results) => {
@@ -271,7 +299,7 @@ app.put('/users/:id', verifyToken, (req, res) => {
 //CATEGORY
 
 //Api no. 5 Endpoint: POST /category | Add new category
-app.post('/category', verifyToken, (req, res) => {
+app.post('/category', requireAuth, (req, res) => {
 
     const { category, description } = req.body;
 
@@ -317,7 +345,7 @@ app.get('/category', (req, res) => {
 //PRODUCT
 
 //Api no. 7 Endpoint: POST /product/ | Add new product
-app.post('/product', verifyToken, (req, res) => {
+app.post('/product', requireAuth, (req, res) => {
 
     const { name, description, categoryid, brand, price } = req.body;
 
@@ -352,7 +380,7 @@ app.get('/product/:id', (req, res) => {
 });
 
 //Api no. 9 Endpoint: DELETE /product/:id/ | Delete product from productid 
-app.delete('/product/:id', verifyToken, (req, res) => {
+app.delete('/product/:id', requireAuth, (req, res) => {
 
 
     productDB.deleteProduct(req.params.id, (err, results) => {
@@ -370,7 +398,7 @@ app.delete('/product/:id', verifyToken, (req, res) => {
 //REVIEW
 
 //Api no. 10 Endpoint: POST /product/:id/review/ | Add review
-app.post('/product/:id/review/', verifyToken, (req, res) => {
+app.post('/product/:id/review/', requireAuth, (req, res) => {
 
     const { userid, rating, review } = req.body;
     reviewDB.addReview(userid, rating, review, req.params.id, (err, results) => {
@@ -406,7 +434,7 @@ app.get('/product/:id/reviews', (req, res) => {
 //BONUS REQUIREMENT DISCOUNT
 
 //Api no. 15 Endpoint: POST /product/:id/discount | Add new discount
-app.post('/discount/:productid', verifyToken, (req, res) => {
+app.post('/discount/:productid', requireAdmin, (req, res) => {
 
     if (req.type.toLowerCase() != "admin") res.status(403).json({ message: 'Not authorized!' });
     if (req.type.toLowerCase() != "admin") return
@@ -464,7 +492,7 @@ app.get('/discount/:id/', (req, res) => {
 //BONUS REQUIREMENT PRODUCT IMAGE
 
 //Api no. 13 Endpoint: POST /product/:id/image  | Upload product image 
-app.post('/product/:id/image', verifyToken, upload.single('image'), function (req, res) {
+app.post('/product/:id/image', requireAuth, upload.single('image'), function (req, res) {
 
     //Check if there is file
     if (req.file == undefined) {
