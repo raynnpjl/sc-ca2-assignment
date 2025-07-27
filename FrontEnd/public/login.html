@@ -79,8 +79,8 @@
 
         axios.post(`http://localhost:8081/user/login`, data).then(({ data }) => {
           if (data != null) {
-            localStorage.setItem("JWT", data.token)
-            localStorage.setItem("User", JSON.stringify(data.UserData));
+            console.log(userData)
+            localStorage.setItem("User", JSON.stringify({userid: data.UserData.userid}));
             $("#feedback").html("Logged in!").removeClass("text-danger").addClass("text-success")
             window.location.assign("http://localhost:3001/index.html")
           } else {

@@ -7,7 +7,7 @@ $(document).ready(function () {
     axios.defaults.withCredentials = true;
 
     // check if user is logged in
-    axios.post("http://localhost:8081/user/isloggedin")
+    axios.post("http://localhost:8081/user/isloggedinRedis")
         .then(({ data }) => {
             if (data != null) {
                 isLoggedIn = true;

@@ -156,8 +156,8 @@
                         if (type.toLowerCase() != "admin") return
 
                         const isAuthorized = () => {
-                          axios.post(`http://localhost:8081/user/isloggedin`, { userid, type }, {
-                            headers: { 'authorization': 'Bearer ' + token }
+                          axios.post(`http://localhost:8081/user/isloggedinRedis`, { userid, type }, {
+                            withCredentials: true, // Include cookies like HttpOnly sessionId
                           }).then(({ data }) => {
                             if (data) {
                               let { userid, type } = data
@@ -739,8 +739,16 @@
           let rating = $("input[type=radio]:checked").val();
           var review = $("#ReviewBox").val();
 
-          if (userInfo == undefined) window.alert("Login to add review!")
-          if (userInfo == undefined) return
+          axios.post(`http://localhost:8081/user/isloggedinRedis`, null, {
+            withCredentials: true, // Include cookies like HttpOnly sessionId
+          })
+          .then(({ data }) => {
+            // User is logged in — do nothing
+          })
+          .catch((err) => {
+            // User is not logged in — show alert
+            window.alert("Login to add review!");
+          });
 
           if (review == undefined || review == "") window.alert("Please Write Something!")
           if (review == undefined || review == "") return
