@@ -360,7 +360,7 @@ app.get('/category', (req, res) => {
 //PRODUCT
 
 //Api no. 7 Endpoint: POST /product/ | Add new product
-app.post('/product', requireAuth, (req, res) => {
+app.post('/product', requireAdmin, (req, res) => {
 
     const { name, description, categoryid, brand, price } = req.body;
 
