@@ -28,6 +28,7 @@ const { requireAuth, requireAdmin } = require('../auth/verifySession.js');
 const orderDB = require('../model/orders');
 const bcryptMiddleware = require('../middleware/bcryptMiddleware.js');
 const sessionMiddleware = require('../middleware/sessionMiddleware.js');
+const { validateReviewInput, sanitizeOutput } = require("../middleware/validateFns.js");
 
 var app = express();
 app.use(cors({
@@ -62,7 +63,7 @@ app.post('/user/isloggedin', verifyToken, (req, res) => {
 });
 
 //Get order
-app.get('/order/:userid', requireAuth, (req, res) => {
+app.get('/order/:userid', verifyToken, (req, res) => {
 
     orderDB.getOrder(req.userid, (err, results) => {
         if (err)
@@ -76,7 +77,7 @@ app.get('/order/:userid', requireAuth, (req, res) => {
 });
 
 //Add Order
-app.post('/order', requireAuth, (req, res) => {
+app.post('/order', verifyToken, (req, res) => {
 
     const cart = req.session.cart;
     if (!cart || cart.length === 0) {
@@ -106,7 +107,7 @@ app.post('/order', requireAuth, (req, res) => {
  
 
 //Update product
-app.put('/product/:productid', requireAuth, (req, res) => {
+app.put('/product/:productid', verifyToken, (req, res) => {
 
     const { name, description, categoryid, brand, price } = req.body;
 
@@ -131,7 +132,7 @@ app.put('/product/:productid', requireAuth, (req, res) => {
 
 
 //Delete Review
-app.delete('/review/:reviewid', requireAuth, (req, res) => {
+app.delete('/review/:reviewid', verifyToken, (req, res) => {
 
     reviewDB.deleteReview(req.params.reviewid, req.userid, (err, results) => {
         if (err)
@@ -282,7 +283,7 @@ app.get('/users/:id', (req, res) => {
 });
 
 //Api no. 4 Endpoint: PUT /users/:id/ | Update info user by userid
-app.put('/users/:id', requireAuth, (req, res) => {
+app.put('/users/:id', verifyToken, (req, res) => {
     const { username, email, contact, password, profile_pic_url, oldpassword } = req.body;
 
     userDB.updateUser(username, email, contact, password, req.type, profile_pic_url, req.userid, oldpassword, (err, results) => {
@@ -312,7 +313,7 @@ app.put('/users/:id', requireAuth, (req, res) => {
 //CATEGORY
 
 //Api no. 5 Endpoint: POST /category | Add new category
-app.post('/category', requireAuth, (req, res) => {
+app.post('/category', verifyToken, (req, res) => {
 
     const { category, description } = req.body;
 
@@ -358,7 +359,7 @@ app.get('/category', (req, res) => {
 //PRODUCT
 
 //Api no. 7 Endpoint: POST /product/ | Add new product
-app.post('/product', requireAuth, (req, res) => {
+app.post('/product', verifyToken, (req, res) => {
 
     const { name, description, categoryid, brand, price } = req.body;
 
@@ -393,7 +394,7 @@ app.get('/product/:id', (req, res) => {
 });
 
 //Api no. 9 Endpoint: DELETE /product/:id/ | Delete product from productid 
-app.delete('/product/:id', requireAuth, (req, res) => {
+app.delete('/product/:id', verifyToken, (req, res) => {
 
 
     productDB.deleteProduct(req.params.id, (err, results) => {
@@ -411,7 +412,7 @@ app.delete('/product/:id', requireAuth, (req, res) => {
 //REVIEW
 
 //Api no. 10 Endpoint: POST /product/:id/review/ | Add review
-app.post('/product/:id/review/', requireAuth, (req, res) => {
+app.post('/product/:id/review/', verifyToken, validateReviewInput, (req, res) => {
 
     const { userid, rating, review } = req.body;
     reviewDB.addReview(userid, rating, review, req.params.id, (err, results) => {
@@ -437,6 +438,7 @@ app.get('/product/:id/reviews', (req, res) => {
 
         //No error, response with all user info
         else
+            results = sanitizeOutput(results);
             res.status(200).json(results)
 
     })
@@ -505,7 +507,7 @@ app.get('/discount/:id/', (req, res) => {
 //BONUS REQUIREMENT PRODUCT IMAGE
 
 //Api no. 13 Endpoint: POST /product/:id/image  | Upload product image 
-app.post('/product/:id/image', requireAuth, upload.single('image'), function (req, res) {
+app.post('/product/:id/image', verifyToken, upload.single('image'), function (req, res) {
 
     //Check if there is file
     if (req.file == undefined) {

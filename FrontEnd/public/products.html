@@ -772,7 +772,7 @@
             success: function (data, textStatus, xhr) {
 
               if (data != null) {
-                window.alert("Success")
+               window.alert("Success")
                 location.reload()
 
               } else {
@@ -781,7 +781,7 @@
             },
             error: function (xhr, textStatus, errorThrown) {
               console.log(errorThrown)
-              window.alert("Not Logged In");
+              window.alert(errorThrown);
             }
           })
 

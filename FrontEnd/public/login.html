@@ -61,16 +61,6 @@
           console.log("User not logged in");
         });
 
-        axios.post(`http://localhost:8081/user/isloggedin`)
-        .then(({ data }) => {
-          // redirect to home page if logged in
-          window.location.assign(`http://localhost:3001/index.html`);
-        })
-        .catch((err) => {
-          // user is not logged in stay on login page
-          console.log("User not logged in");
-        });
-
       $("#signin").click(function () {
         let password = $("#password").val();
         let username = $("#username").val();
@@ -78,8 +68,8 @@
 
         axios.post(`http://localhost:8081/user/login`, data).then(({ data }) => {
           if (data != null) {
-            console.log(userData)
-            localStorage.setItem("User", JSON.stringify({userid: data.UserData.userid}));
+            localStorage.setItem("JWT", data.token)
+            localStorage.setItem("User", JSON.stringify([data.UserData]));
             $("#feedback").html("Logged in!").removeClass("text-danger").addClass("text-success")
             window.location.assign("http://localhost:3001/index.html")
           } else {
