@@ -38,117 +38,142 @@
 
   <script>
     $(document).ready(function () {
-      var token = localStorage.getItem("JWT");
-      var userInfo = localStorage.getItem("User")
-      let userId = -1
+      $("#container").hide();
 
+      axios.defaults.withCredentials = true;
 
-      if (userInfo != undefined)
-        userId = JSON.parse(userInfo)[0].userid
-      else
-        window.location.assign("http://localhost:3001/index.html")
+      $.ajaxSetup({
+        xhrFields: {
+          withCredentials: true
+        }
+      });
+
+      let userId = -1;
+      let userType = '';
+
+      axios.post(`http://localhost:8081/user/isloggedin`)
+        .then(({ data }) => {
+          const { userid, type } = data;
+
+          if (!userid) {
+            alert("Please log in.");
+            window.location.assign(`http://localhost:3001/login.html`);
+            return;
+          }
+
+          userId = userid;
+          userType = type;
+          $("#container").show();
+
+          getOrders();
+          saveEditUser();
+          editUser();
+        })
+        .catch(() => {
+          alert("Please log in.");
+          window.location.assign(`http://localhost:3001/login.html`);
+        });
 
       function editUser() {
-        axios.get(`http://localhost:8081/users/${userId}`, {
-          headers: { 'authorization': 'Bearer ' + token }
-        }).then(({ data: userData }) => {
-          const { contact, email, profile_pic_url, username } = userData
-          $("#editUsername").val(username)
-          $("#editEmail").val(email)
-          $("#editContact").val(contact)
-          $("#editProfilePic").val(profile_pic_url)
-        }).catch((err) => console.log(err));
+        axios.get(`http://localhost:8081/users/${userId}`)
+          .then(({ data: userData }) => {
+            const { contact, email, profile_pic_url, username } = userData;
+            $("#editUsername").val(username);
+            $("#editEmail").val(email);
+            $("#editContact").val(contact);
+            $("#editProfilePic").val(profile_pic_url);
+          })
+          .catch((err) => console.log(err));
       }
 
       function saveEditUser() {
         $("#saveProfile").click((e) => {
-          e.preventDefault()
-          const username = $("#editUsername").val()
-          const email = $("#editEmail").val()
-          const contact = $("#editContact").val()
-          const profile_pic_url = $("#editProfilePic").val()
+          e.preventDefault();
+          const username = $("#editUsername").val();
+          const email = $("#editEmail").val();
+          const contact = $("#editContact").val();
+          const profile_pic_url = $("#editProfilePic").val();
 
-          const oldpassword = $("#editCurrentPassword").val()
-          const password = $("#editNewPassword").val()
-          const CNewPassword = $("#editCNewPassword").val()
+          const oldpassword = $("#editCurrentPassword").val();
+          const password = $("#editNewPassword").val();
+          const CNewPassword = $("#editCNewPassword").val();
 
-          if (username == "") $("#editUsername").addClass("is-invalid").removeClass("is-valid")
-          else $("#editUsername").removeClass("is-invalid").addClass("is-valid")
+          if (username == "") $("#editUsername").addClass("is-invalid").removeClass("is-valid");
+          else $("#editUsername").removeClass("is-invalid").addClass("is-valid");
 
-          if (email == "") $("#editEmail").addClass("is-invalid").removeClass("is-valid")
-          else $("#editEmail").removeClass("is-invalid").addClass("is-valid")
+          if (email == "") $("#editEmail").addClass("is-invalid").removeClass("is-valid");
+          else $("#editEmail").removeClass("is-invalid").addClass("is-valid");
 
-          if (contact == "" || isNaN(contact)) $("#editContact").addClass("is-invalid").removeClass("is-valid")
-          else $("#editContact").removeClass("is-invalid").addClass("is-valid")
+          if (contact == "" || isNaN(contact)) $("#editContact").addClass("is-invalid").removeClass("is-valid");
+          else $("#editContact").removeClass("is-invalid").addClass("is-valid");
 
-          if (profile_pic_url == "") $("#editProfilePic").addClass("is-invalid").removeClass("is-valid")
-          else $("#editProfilePic").removeClass("is-invalid").addClass("is-valid")
+          if (profile_pic_url == "") $("#editProfilePic").addClass("is-invalid").removeClass("is-valid");
+          else $("#editProfilePic").removeClass("is-invalid").addClass("is-valid");
 
-          if (oldpassword == "") $("#editCurrentPassword").addClass("is-invalid").removeClass("is-valid")
-          else $("#editCurrentPassword").removeClass("is-invalid").addClass("is-valid")
+          if (oldpassword == "") $("#editCurrentPassword").addClass("is-invalid").removeClass("is-valid");
+          else $("#editCurrentPassword").removeClass("is-invalid").addClass("is-valid");
 
-          if (password == "") $("#editNewPassword").addClass("is-invalid").removeClass("is-valid")
-          else $("#editNewPassword").removeClass("is-invalid").addClass("is-valid")
+          if (password == "") $("#editNewPassword").addClass("is-invalid").removeClass("is-valid");
+          else $("#editNewPassword").removeClass("is-invalid").addClass("is-valid");
 
-          if (CNewPassword == "" || password != CNewPassword) $("#editCNewPassword").addClass("is-invalid").removeClass("is-valid")
-          else $("#editCNewPassword").removeClass("is-invalid").addClass("is-valid")
+          if (CNewPassword == "" || password != CNewPassword) $("#editCNewPassword").addClass("is-invalid").removeClass("is-valid");
+          else $("#editCNewPassword").removeClass("is-invalid").addClass("is-valid");
 
-          if (username == "" || email == "" || contact == "" || isNaN(contact) || profile_pic_url == "" || oldpassword == "" || password == "" || CNewPassword == "") return
+          if (username == "" || email == "" || contact == "" || isNaN(contact) || profile_pic_url == "" || oldpassword == "" || password == "" || CNewPassword == "") return;
 
-          let data = { username, email, contact, password, profile_pic_url, oldpassword }
+          let data = { username, email, contact, password, profile_pic_url, oldpassword };
 
-          axios.put(`http://localhost:8081/users/${userId}`, data, {
-            headers: { 'authorization': 'Bearer ' + token }
-          }).then(() => {
-            $("#saveFeedback").addClass("text-success").removeClass("text-danger")
-            $("#saveFeedback").html("Successfully change!")
-          }).catch((err) => {
-            let errorMessage = "";
-            if (err.response) {
-              const { data, status, headers } = err.response
-              errorMessage = data.message
-            } else {
-              errorMessage = "Error!"
-            }
-            $("#saveFeedback").addClass("text-danger").removeClass("text-success")
-            $("#saveFeedback").html(errorMessage)
-          });
+          axios.put(`http://localhost:8081/users/${userId}`, data)
+            .then(() => {
+              $("#saveFeedback").addClass("text-success").removeClass("text-danger");
+              $("#saveFeedback").html("Successfully changed!");
+            })
+            .catch((err) => {
+              let errorMessage = "";
+              if (err.response) {
+                const { data, status, headers } = err.response;
+                errorMessage = data.message;
+              } else {
+                errorMessage = "Error!";
+              }
+              $("#saveFeedback").addClass("text-danger").removeClass("text-success");
+              $("#saveFeedback").html(errorMessage);
+            });
 
-          return false
-        })
+          return false;
+        });
       }
 
-
       function getOrders() {
-        axios.get(`http://localhost:8081/order/${userId}`, {
-          headers: { 'authorization': 'Bearer ' + token }
-        }).then(({ data: orderData }) => {
+        axios.get(`http://localhost:8081/order/${userId}`)
+          .then(({ data: orderData }) => {
 
-          if (orderData.length < 1)
-            $("#accordion").append(` <h4 class="d-flex justify-content-center" id="empty">Empty</h4>`)
-          axios.get(`http://localhost:8081/product`).then(({ data: allProduct }) => {
+            if (orderData.length < 1)
+              $("#accordion").append(` <h4 class="d-flex justify-content-center" id="empty">Empty</h4>`);
 
-            const getInfo = () => {
-              let temp = [];
-              orderData.forEach(({ cart: userCart, total, created_at, orderid }) => {
-                temp.push({ cart: JSON.parse(userCart), total, created_at, orderid })
-              });
-              return temp
-            };
+            axios.get(`http://localhost:8081/product`).then(({ data: allProduct }) => {
 
-            const getCartItem = (index) => {
-              let temp = ""
-              let product = {};
-              getInfo()[index].cart.forEach(({ productid, discountPercentage, price, quantity }) => {
-                allProduct.forEach((getProd) => {
-                  let { productid: checkid, name, imagepath } = getProd
-                  if (productid == checkid)
-                    product = getProd
+              const getInfo = () => {
+                let temp = [];
+                orderData.forEach(({ cart: userCart, total, created_at, orderid }) => {
+                  temp.push({ cart: JSON.parse(userCart), total, created_at, orderid });
                 });
-                temp += `
-<div class="card-body row m-0">
+                return temp;
+              };
+
+              const getCartItem = (index) => {
+                let temp = "";
+                let product = {};
+                getInfo()[index].cart.forEach(({ productid, discountPercentage, price, quantity }) => {
+                  allProduct.forEach((getProd) => {
+                    let { productid: checkid, name, imagepath } = getProd;
+                    if (productid == checkid)
+                      product = getProd;
+                  });
+                  temp += `
+          <div class="card-body row m-0">
             <div class="col-2">
-              <img class="rounded mx-0 d-block m-2" src="${product.imagepath != null ? " http://localhost:8081/" + product.imagepath : null}" style="height: auto;width: 100px;">
+              <img class="rounded mx-0 d-block m-2" src="${product.imagepath != null ? "http://localhost:8081/" + product.imagepath : null}" style="height: auto;width: 100px;">
             </div>
             <div class="col-3 d-grid d-flex justify-content-start align-self-center">
               ${product.name}
@@ -160,33 +185,34 @@
               ${quantity} x $${price}
             </div>
           </div>
-`
-              })
+`;
+                });
 
-              return temp
-            }
-            getInfo().forEach(({ cart, total, created_at, orderid }, index) => {
-              console.log(cart, total, created_at)
-              $("#accordion").append(`
-        <div class="card">
-        <div class="card-header" id="order${index}">
-          <h5 class="mb-0 row mx-1">
-            <button class="col btn btn-link flex-column" data-toggle="collapse" data-target="#collapse${index}"
-              aria-expanded="true" aria-controls="collapse${index}">
-              Order ID: ${orderid} 
-            </button>
+                return temp;
+              };
+
+              getInfo().forEach(({ cart, total, created_at, orderid }, index) => {
+                console.log(cart, total, created_at);
+                $("#accordion").append(`
+                <div class="card">
+                <div class="card-header" id="order${index}">
+                <h5 class="mb-0 row mx-1">
+                <button class="col btn btn-link flex-column" data-toggle="collapse" data-target="#collapse${index}"
+                aria-expanded="true" aria-controls="collapse${index}">
+                Order ID: ${orderid} 
+              </button>
            
-            <div class="col d-flex d-grid justify-content-end">
+              <div class="col d-flex d-grid justify-content-end">
               
               <button class="btn btn-link" data-toggle="collapse" data-target="#collapse${index}" aria-expanded="true"
                 aria-controls="collapse${index}">
                 Total: $${total}
               </button>
 
-                <button class="btn btn-link" data-toggle="collapse" data-target="#collapse${index}"
+            <button class="btn btn-link" data-toggle="collapse" data-target="#collapse${index}"
               aria-expanded="true" aria-controls="collapse${index}">
               ${new Date(created_at).toLocaleDateString('en-UK', { day: 'numeric', month: 'short', year: 'numeric', })}
-           </button>
+            </button>
            
             </div>
           </h5>
@@ -197,19 +223,14 @@
           
         </div>
       </div>
-        `)
-            });
+        `);
+              });
 
+            }).catch((err) => console.log(err));
           }).catch((err) => console.log(err));
-        }).catch((err) => console.log(err));
       }
 
       $("#categoryinterest").empty();
-      getOrders()
-      saveInterest()
-      getInterest()
-      saveEditUser()
-      editUser()
 
     });
   </script>
