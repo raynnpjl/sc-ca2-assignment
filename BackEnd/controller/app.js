@@ -24,7 +24,7 @@ const productDB = require('../model/product');
 const reviewDB = require('../model/review');
 const discountDB = require('../model/discount');
 const productImagesDB = require('../model/productimages');
-// var verifyToken = require('../auth/verifyToken.js');
+var verifyToken = require('../auth/verifyToken.js');
 const { requireAuth, requireAdmin } = require('../auth/verifySession.js');
 const orderDB = require('../model/orders');
 const bcryptMiddleware = require('../middleware/bcryptMiddleware.js');
@@ -45,7 +45,7 @@ app.use(express.static(path.join(__dirname, '../public/')));
 app.use(sessionMiddleware);
 
 //Get if user is logged in with correct token
-app.post('/user/isloggedin', (req, res) => {
+app.post('/user/isloggedinRedis', (req, res) => {
     if (req.session.user) {
         res.status(200).json({
             userid: req.session.user.userid,
@@ -54,6 +54,13 @@ app.post('/user/isloggedin', (req, res) => {
     } else {
         res.status(401).json({ Message: "Not logged in" })
     }
+});
+
+app.post('/user/isloggedin', verifyToken, (req, res) => {
+    res.status(200).json({
+        username: req.username,
+        role: req.role
+    });
 });
 
 //Get order
@@ -180,15 +187,21 @@ app.post('/user/login', function (req, res) {
 
     userDB.loginUser(username, password, function (err, result, token) {
         if (!err) {
-
             req.session.user = {
-                userid: result[0].userid,
-                type: result[0].type
+            userid: result[0].userid,
+            type: result[0].type
             };
 
             console.log(result[0].username + " logged in");
-            
-            res.status(200).json({ success: 'login successful' });
+
+            return res.status(200).json({
+                token: token,
+                UserData: {
+                    userid: result[0].userid,
+                    username: result[0].username,
+                    type: result[0].type
+                }
+            });
 
         } else {
             res.status(500);
@@ -360,7 +373,7 @@ app.get('/category', (req, res) => {
 //PRODUCT
 
 //Api no. 7 Endpoint: POST /product/ | Add new product
-app.post('/product', requireAdmin, (req, res) => {
+app.post('/product', requireAuth, (req, res) => {
 
     const { name, description, categoryid, brand, price } = req.body;
 
@@ -379,18 +392,20 @@ app.post('/product', requireAdmin, (req, res) => {
 
 //Api no. 8 GET /product/:id | Get product info from productid 
 app.get('/product/:id', (req, res) => {
-    const productId = parseInt(req.params.id, 10);
 
-    if (isNaN(productId)) {
-        return res.status(400).json({ result: "Invalid product ID" });
-    }
+    productDB.getProduct(req.params.id, (err, results) => {
 
-    productDB.getProduct(productId, (err, results) => {
-        if (err) return res.status(500).json({ result: "Internal Error" });
-        res.status(200).json(results);
-    });
+        if (err)
+            res.status(500).json({ result: "Internal Error" })
+
+        //No error, response with product info
+        else {
+            res.status(200).json(results)
+
+        }
+    })
+
 });
-
 
 //Api no. 9 Endpoint: DELETE /product/:id/ | Delete product from productid 
 app.delete('/product/:id', requireAuth, (req, res) => {

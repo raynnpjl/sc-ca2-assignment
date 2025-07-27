@@ -40,14 +40,6 @@
   $(document).ready(function () {
     // hide the main content initially
     $("#container").hide();
-    
-    $.ajaxSetup({
-        xhrFields: {
-            withCredentials: true
-        }
-    });
-
-    axios.defaults.withCredentials = true;
 
     // check if user is logged in and is admin
     axios.post(`http://localhost:8081/user/isloggedin`)

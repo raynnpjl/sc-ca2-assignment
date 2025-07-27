@@ -20,18 +20,19 @@ const reviewDB = {
 
         //Sql query
         dbConn.query(`
-          INSERT INTO reviews (userid, rating, review, productid)
-          VALUES (?, ?, ?, ?)
-        `, [userid, rating, review, productid], function (err, results) {
-        
-            // End connection
-            dbConn.end();
-        
-            if (err)
-                console.log(err);
-        
-            return callback(err, results);
-        });      
+        insert into reviews
+        (userid, rating, review, productid)
+        values(${userid}, ${rating}, '${review}', ${productid});`, [], function (err, results) {
+
+          //End connection
+          dbConn.end();
+
+          if (err)
+            console.log(err)
+
+          return callback(err, results)
+        });
+
       }
 
     });
@@ -90,18 +91,17 @@ const reviewDB = {
       } else {
 
         //Sql query
-        dbConn.query(`
-          DELETE FROM reviews WHERE reviewid = ? AND userid = ?
-        `, [reviewid, userid], function (err, results) {
-        
-            // End connection
-            dbConn.end();
-        
-            if (err)
-                console.log(err);
-        
-            return callback(err, results);
-        });      
+        dbConn.query(`delete from reviews where reviewid = ${reviewid} and userid = ${userid};`, [], function (err, results) {
+
+          //End connection
+          dbConn.end();
+
+          if (err)
+            console.log(err)
+
+          return callback(err, results)
+        });
+
       }
 
     });
