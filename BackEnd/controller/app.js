@@ -16,7 +16,6 @@ const storage = multer.diskStorage({
     }
 })
 const upload = multer({ storage: storage })
-const validator = require('validator');
 
 var userDB = require('../model/user');
 const categoryDB = require('../model/category');
@@ -29,7 +28,6 @@ const { requireAuth, requireAdmin } = require('../auth/verifySession.js');
 const orderDB = require('../model/orders');
 const bcryptMiddleware = require('../middleware/bcryptMiddleware.js');
 const sessionMiddleware = require('../middleware/sessionMiddleware.js');
-
 
 var app = express();
 app.use(cors({
@@ -228,19 +226,6 @@ app.post('/users', bcryptMiddleware.hashPassword, (req, res) => {
     if(!profile_pic_url){
         profile_pic_url="";
     }
-    
-    if (!validator.isStrongPassword(password, {
-        minLength: 8,
-        minLowercase: 1,
-        minUppercase: 1,
-        minNumbers: 1,
-        minSymbols: 1
-    })) {
-        return res.status(400).json({
-            message: "Password must be at least 8 characters long and include at least one number, one special character, one lowercase letter, and one uppercase letter."
-        });
-    } 
-
     userDB.addNewUser(username, email, contact, res.locals.hash, "Customer", profile_pic_url, (err, results) => {
 
         if (err) {
