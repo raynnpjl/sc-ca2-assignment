@@ -61,8 +61,8 @@ const productDB = {
         left join reviews r on r.productid = p.productid
         left join productimages pi on pi.productid = p.productid 
         left join discount d on d.productid = p.productid 
-        where p.productid = ${productid}
-        GROUP BY p.productid`, [], function (err, results) {
+        where p.productid = ?
+        GROUP BY p.productid`, [productid], function (err, results) {
 
           //End connection
           dbConn.end();
@@ -96,12 +96,12 @@ const productDB = {
         //Sql query
         dbConn.query(`
         select p.productid, p.name, p.description, c.categoryid, category categoryname, p.brand, p.price, COUNT(distinct r.reviewid) reviewcount, pi.path imagepath, AVG( r.rating) rating, d.discountid, d.discount_percentage
-from product p
-join category c on c.categoryid = p.categoryid  
-left join reviews r on r.productid = p.productid
-left join productimages pi on pi.productid = p.productid 
-left join discount d on d.productid = p.productid 
-GROUP BY p.productid;`, [], function (err, results) {
+        from product p
+        join category c on c.categoryid = p.categoryid  
+        left join reviews r on r.productid = p.productid
+        left join productimages pi on pi.productid = p.productid 
+        left join discount d on d.productid = p.productid 
+        GROUP BY p.productid;`, [], function (err, results) {
 
           //End connection
           dbConn.end();
@@ -135,11 +135,11 @@ GROUP BY p.productid;`, [], function (err, results) {
         //Sql query
         dbConn.query(`
         select p.productid, p.name, p.description, c.categoryid, category categoryname, p.brand, p.price, COUNT(distinct r.reviewid) reviewcount, pi.path imagepath, AVG(distinct r.rating) rating
-from product p
-join category c on c.categoryid = p.categoryid  and p.brand =?
-left join reviews r on r.productid = p.productid
-left join productimages pi on pi.productid = p.productid 
-GROUP BY p.productid;`, [brand], function (err, results) {
+        from product p
+        join category c on c.categoryid = p.categoryid  and p.brand =?
+        left join reviews r on r.productid = p.productid
+        left join productimages pi on pi.productid = p.productid 
+        GROUP BY p.productid;`, [brand], function (err, results) {
 
           //End connection
           dbConn.end();
