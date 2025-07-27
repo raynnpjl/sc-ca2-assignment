@@ -392,18 +392,20 @@ app.post('/product', requireAuth, (req, res) => {
 
 //Api no. 8 GET /product/:id | Get product info from productid 
 app.get('/product/:id', (req, res) => {
-    const productId = parseInt(req.params.id, 10);
 
-    if (isNaN(productId)) {
-        return res.status(400).json({ result: "Invalid product ID" });
-    }
+    productDB.getProduct(req.params.id, (err, results) => {
 
-    productDB.getProduct(productId, (err, results) => {
-        if (err) return res.status(500).json({ result: "Internal Error" });
-        res.status(200).json(results);
-    });
+        if (err)
+            res.status(500).json({ result: "Internal Error" })
+
+        //No error, response with product info
+        else {
+            res.status(200).json(results)
+
+        }
+    })
+
 });
-
 
 //Api no. 9 Endpoint: DELETE /product/:id/ | Delete product from productid 
 app.delete('/product/:id', requireAuth, (req, res) => {

@@ -735,20 +735,12 @@
 
         $(document).on("click", "#Review", function () {
 
+          var userInfo = localStorage.getItem("User")
           let rating = $("input[type=radio]:checked").val();
           var review = $("#ReviewBox").val();
 
           if (userInfo == undefined) window.alert("Login to add review!")
           if (userInfo == undefined) return
-
-          axios.post(`http://localhost:8081/user/isloggedin`)
-          .then(({ data }) => {
-            // User is logged in — do nothing
-          })
-          .catch((err) => {
-            // user is not logged in stay on login page
-            window.alert("Login to add review!")
-          });
 
           if (review == undefined || review == "") window.alert("Please Write Something!")
           if (review == undefined || review == "") return
