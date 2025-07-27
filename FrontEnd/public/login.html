@@ -43,10 +43,16 @@
   <script>
     $(document).ready(function () {
 
+      const token = localStorage.getItem('JWT');
+      const userData = localStorage.getItem("User");
+
+      if (userData != null || token != null) window.location.assign(`http://localhost:3001/index.html`)
+      if (userData != null || token != null) return
+
       axios.defaults.withCredentials = true;
 
       // cheching if user is logged in
-      axios.post(`http://localhost:8081/user/isloggedin`)
+      axios.post(`http://localhost:8081/user/isloggedinRedis`)
         .then(({ data }) => {
           // redirect to home page if logged in
           window.location.assign(`http://localhost:3001/index.html`);
@@ -63,6 +69,8 @@
 
         axios.post(`http://localhost:8081/user/login`, data).then(({ data }) => {
           if (data != null) {
+            localStorage.setItem("JWT", data.token)
+            localStorage.setItem("User", JSON.stringify(data.UserData));
             $("#feedback").html("Logged in!").removeClass("text-danger").addClass("text-success")
             window.location.assign("http://localhost:3001/index.html")
           } else {

@@ -196,7 +196,16 @@ const userDB = {
                   return callback(err2, null, null);
                 }
   
-                return callback(null, result, null);
+                const token = jwt.sign(
+                  {
+                    userid: user.userid,
+                    type: user.type,
+                  },
+                  config.key,
+                  { expiresIn: 86400 } // 24 hours
+                );
+                
+                return callback(null, result, token);
               });
             } else {
               const err2 = new Error("User not found.");
