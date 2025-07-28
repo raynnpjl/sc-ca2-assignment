@@ -16,6 +16,7 @@ const storage = multer.diskStorage({
     }
 })
 const upload = multer({ storage: storage })
+const validator = require('validator');
 
 var userDB = require('../model/user');
 const categoryDB = require('../model/category');
@@ -227,6 +228,19 @@ app.post('/users', bcryptMiddleware.hashPassword, (req, res) => {
     if(!profile_pic_url){
         profile_pic_url="";
     }
+    
+    if (!validator.isStrongPassword(password, {
+        minLength: 8,
+        minLowercase: 1,
+        minUppercase: 1,
+        minNumbers: 1,
+        minSymbols: 1
+    })) {
+        return res.status(400).json({
+            message: "Password must be at least 8 characters long and include at least one number, one special character, one lowercase letter, and one uppercase letter."
+        });
+    } 
+
     userDB.addNewUser(username, email, contact, res.locals.hash, "Customer", profile_pic_url, (err, results) => {
 
         if (err) {
@@ -250,7 +264,7 @@ app.post('/users', bcryptMiddleware.hashPassword, (req, res) => {
 })
 
 //Api no. 2 Endpoint: GET /users/ | Get all user
-app.get('/users', (req, res) => {
+app.get('/users', requireAdmin, (req, res) => {
 
     userDB.getAllUser((err, results) => {
 
@@ -267,7 +281,7 @@ app.get('/users', (req, res) => {
 });
 
 //Api no. 3 Endpoint: GET /users/:id/ | Get user by userid
-app.get('/users/:id', (req, res) => {
+app.get('/users/:id', requireAdmin, (req, res) => {
 
     userDB.getUser(req.params.id, (err, results) => {
 
