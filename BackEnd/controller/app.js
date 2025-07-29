@@ -378,6 +378,10 @@ app.post('/product', verifyToken, (req, res) => {
 
 //Api no. 8 GET /product/:id | Get product info from productid 
 app.get('/product/:id', (req, res) => {
+    const productId = parseInt(req.params.id, 10);
+    if (isNaN(productId)) {
+        return res.status(400).json({ message: "Invalid product ID" });
+    }
 
     productDB.getProduct(req.params.id, (err, results) => {
 

@@ -22,7 +22,7 @@ const reviewDB = {
         dbConn.query(`
         insert into reviews
         (userid, rating, review, productid)
-        values(${userid}, ${rating}, '${review}', ${productid});`, [], function (err, results) {
+        values(?, ?, ?, ?);`, [userid, rating, review, productid], function (err, results) {
 
           //End connection
           dbConn.end();
@@ -91,7 +91,7 @@ const reviewDB = {
       } else {
 
         //Sql query
-        dbConn.query(`delete from reviews where reviewid = ${reviewid} and userid = ${userid};`, [], function (err, results) {
+        dbConn.query(`delete from reviews where reviewid = ? and userid = ?;`, [reviewid, userid], function (err, results) {
 
           //End connection
           dbConn.end();
