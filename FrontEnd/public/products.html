@@ -122,6 +122,9 @@
           type: "GET",
           contentType: "application/json",
           dataType: "json",
+          xhrFields: {
+          withCredentials: true // Include cookies like HttpOnly sessionId
+          },
           success: function (data, textStatus, xhr) {
 
             let divProduct = "";
@@ -721,6 +724,9 @@
             type: "DELETE",
             contentType: "application/json",
             dataType: "json",
+            xhrFields: {
+            withCredentials: true // Include cookies like HttpOnly sessionId
+            },
             success: function (data, textStatus, xhr) {
               window.alert("Deleted!")
               location.reload()
@@ -769,6 +775,9 @@
             data: data,
             contentType: "application/json",
             dataType: "json",
+            xhrFields: {
+            withCredentials: true // Include cookies like HttpOnly sessionId
+            },
             success: function (data, textStatus, xhr) {
 
               if (data != null) {
@@ -809,6 +818,9 @@
           type: "GET",
           contentType: "application/json",
           dataType: "json",
+          xhrFields: {
+          withCredentials: true // Include cookies like HttpOnly sessionId
+          },
           success: function (data, textStatus, xhr) {
 
             var existingBrand = []

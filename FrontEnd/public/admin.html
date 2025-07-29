@@ -152,6 +152,9 @@
         data,
         contentType: 'application/json',
         dataType: 'json',
+        xhrFields: {
+        withCredentials: true // Include cookies like HttpOnly sessionId
+        },
         success: function ({ productid }) {
           axios.post(`http://localhost:8081/product/${productid}/image`, dataImage)
             .then(() => {

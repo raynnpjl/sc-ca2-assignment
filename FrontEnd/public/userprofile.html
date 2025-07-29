@@ -37,6 +37,8 @@
 <body>
 
   <script>
+    axios.defaults.withCredentials = true;
+    
     $(document).ready(function () {
       var token = localStorage.getItem("JWT");
       var userInfo = localStorage.getItem("User")

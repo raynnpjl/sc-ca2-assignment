@@ -48,6 +48,9 @@
         type: "GET",
         contentType: "application/json",
         dataType: "json",
+        xhrFields: {
+        withCredentials: true // Include cookies like HttpOnly sessionId
+        },
         success: function (data, textStatus, xhr) {
 
           var divBrandDropDown = "";

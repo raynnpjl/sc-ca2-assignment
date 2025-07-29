@@ -139,6 +139,8 @@
 	<!--================End Login Box Area =================-->
 	
 	<script>
+		axios.defaults.withCredentials = true;
+		
 		$("#register_form").submit((event) => {
 			// prevent page reload
 			event.preventDefault();

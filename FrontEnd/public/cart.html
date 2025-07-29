@@ -39,6 +39,8 @@
   <script>
     $(document).ready(function () {
 
+      axios.defaults.withCredentials = true;
+
       function getTotal() {
         let cart = localStorage.getItem("Cart")
         if (cart == null || cart == "[]" || cart == "null") window.alert("Cart empty")
