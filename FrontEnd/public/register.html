@@ -23,6 +23,7 @@
 	<script src="vendor/jquery/jquery.min.js"></script>
 	<script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
 	<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+	<script src="https://unpkg.com/validator@latest/validator.min.js"></script>
 
 	<!-- Additional Scripts -->
 	<script src="js/custom.js"></script>
@@ -150,6 +151,15 @@
 			const confirmPassword = $("#confirmPassword").val();
 			const password = $("#password").val();
 			if (!name || !contact || !email || !confirmPassword || !password) alert("Please do not leave empty!")
+			else if (!validator.isStrongPassword(password, {
+				minLength: 8, 
+				minLowercase: 1,
+				minUppercase: 1,
+				minNumbers: 1,
+				minSymbols: 1
+			})) {
+				alert("Password must be at least 8 characters long and include uppercase, lowercase, number, and special characters.");
+			}
 			else if (confirmPassword != password) alert("The passwords are not match!Please enter again.")
 			else {
 				fetch(`http://localhost:8081/users`, {
