@@ -23,6 +23,7 @@ $(document).ready(function () {
         })
         .catch((err) => {
             // if user is not loged in or if session expired
+            localStorage.clear()
             $("#userprofile").hide()
             $("#logincontainer").show()
             $("#logoutcontainer").hide()

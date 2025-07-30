@@ -17,8 +17,9 @@ const storage = multer.diskStorage({
 })
 const upload = multer({ storage: storage })
 const validator = require('validator');
+const { loginLogger, crudLogger } = require('../logger.js');
 
-var userDB = require('../model/user');
+var userDB = require('../model/user');$
 const categoryDB = require('../model/category');
 const productDB = require('../model/product');
 const reviewDB = require('../model/review');
@@ -47,16 +48,19 @@ app.use(sessionMiddleware);
 //Get if user is logged in with correct token
 app.post('/user/isloggedinRedis', (req, res) => {
     if (req.session.user) {
+        crudLogger.info(`POST - user/isloggedinRedis - User ID: ${req.session.user.userid}`);
         res.status(200).json({
             userid: req.session.user.userid,
             type: req.session.user.type
         });
     } else {
+        crudLogger.warn(`POST - user/isloggedinRedis - User not logged in`);
         res.status(401).json({ Message: "Not logged in" })
     }
 });
 
 app.post('/user/isloggedin', requireAuth, verifyToken, (req, res) => {
+    crudLogger.info(`POST - user/isloggedin - User ID: ${req.userid}`);
     res.status(200).json({
         username: req.username,
         role: req.role
@@ -67,10 +71,12 @@ app.post('/user/isloggedin', requireAuth, verifyToken, (req, res) => {
 app.get('/order/:userid', requireAuth, verifyToken, (req, res) => {
 
     orderDB.getOrder(req.userid, (err, results) => {
-        if (err)
+        if (err) {
+            crudLogger.error(`GET - order/${req.userid} - Error: ${err.message}`);
             res.status(500).json({ result: "Internal Error" })
-
+        }
         else {
+            crudLogger.info(`GET - order/${req.userid} - Order Count: ${results.length}`);
             res.status(200).send(results);
         }
 
@@ -93,14 +99,18 @@ app.post('/order', requireAuth, verifyToken, (req, res) => {
 
     orderDB.addOrder(req.userid, JSON.stringify(cart), total, (err, results) => {
         if (err) {
-            if (err?.message)
+            if (err?.message) {
+                crudLogger.error(`POST - order - User ID: ${req.userid} - Error: ${err.message}`);
                 res.status(400).json({ message: err?.message });
+            }
             else
+                crudLogger.error(`POST - order - User ID: ${req.userid} - Error: Internal Error`);
                 res.status(500).json({ message: "Internal Error" });
         } else {
             // Clear cart after order placed
             req.session.cart = [];
 
+            crudLogger.info(`POST - order - User ID: ${req.userid} - Order ID: ${results.insertId}`);
             res.status(201).json({ orderid: results.insertId });
         }
     });
@@ -114,15 +124,18 @@ app.put('/product/:productid', requireAuth, verifyToken, (req, res) => {
 
     productDB.updateProduct(name, description, categoryid, brand, price, req.params.productid, (err, results) => {
 
-        if (err)
+        if (err) {
+            crudLogger.error(`PUT - product/${req.params.productid} - Error: ${err.message}`);
             res.status(500).json({ result: "Internal Error" })
-
-
+        }
         //No error, response with productid
         else {
-            if (results.affectedRows < 1)
+            if (results.affectedRows < 1) {
+                crudLogger.info(`PUT - product/${req.params.productid} - Nothing was updated! Product might not exist`);
                 res.status(500).json({ message: "Nothing was updated! Product might not exist" })
+            }
             else
+                crudLogger.info(`PUT - product/${req.params.productid} - Updated Product ID: ${req.params.productid}`);
                 res.status(201).json({ affectedRows: results.affectedRows })
 
         }
@@ -136,13 +149,15 @@ app.put('/product/:productid', requireAuth, verifyToken, (req, res) => {
 app.delete('/review/:reviewid', requireAuth, verifyToken, (req, res) => {
 
     reviewDB.deleteReview(req.params.reviewid, req.userid, (err, results) => {
-        if (err)
+        if (err) {
+            crudLogger.error(`DELETE - review/${req.params.reviewid} - Error: ${err.message}`);
             res.status(500).json({ result: "Internal Error" })
-
+        }
         else {
             if (results.affectedRows < 1)
                 res.status(500).json({ result: "Internal Error" })
             else
+                crudLogger.info(`DELETE - review/${req.params.reviewid} - Deleted Review ID: ${req.params.reviewid}`);
                 res.status(204).end();
         }
     })
@@ -158,6 +173,7 @@ app.get('/product/brand/:brand', (req, res) => {
 
         //No error, response with product info
         else {
+            crudLogger.info(`GET - product/brand/${req.params.brand} - Found ${results.length} products`);
             res.status(200).json(results)
         }
     })
@@ -174,6 +190,7 @@ app.get('/product', (req, res) => {
 
         //No error, response with product info
         else {
+            crudLogger.info(`GET - product - Found ${results.length} products`);
             res.status(200).json(results)
 
         }
@@ -182,17 +199,20 @@ app.get('/product', (req, res) => {
 
 //login
 app.post('/user/login', function (req, res) {
-    var username = req.body.username;
-    var password = req.body.password;
+    const username = req.body.username;
+    const password = req.body.password;
+
+    // Extract client IP
+    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
 
     userDB.loginUser(username, password, function (err, result, token) {
         if (!err) {
             req.session.user = {
-            userid: result[0].userid,
-            type: result[0].type
+                userid: result[0].userid,
+                type: result[0].type
             };
 
-            console.log(result[0].username + " logged in");
+            loginLogger.info(`LOGIN SUCCESS - ${result[0].username} from IP ${ip}`);
 
             return res.status(200).json({
                 token: token,
@@ -202,8 +222,9 @@ app.post('/user/login', function (req, res) {
                     type: result[0].type
                 }
             });
-
         } else {
+            loginLogger.warn(`LOGIN FAIL - ${username} from IP ${ip} - Error Code: ${err.statusCode}`);
+
             res.status(500);
             res.send("Error Code: " + err.statusCode);
         }
@@ -214,8 +235,10 @@ app.post('/user/login', function (req, res) {
 app.post('/user/logout', (req, res) => {
   req.session.destroy((err) => {
     if (err) {
+      loginLogger.error(`LOGOUT FAIL - Error: ${err.message}`);
       return res.status(500).json({ message: 'Could not log out' });
     }
+    loginLogger.info(`LOGOUT SUCCESS - User ID: ${req.session.user.userid}`);
     res.clearCookie('sessionId'); // Clear session cookie
     res.status(200).json({ message: 'Logged out successfully' });
   });
@@ -257,6 +280,7 @@ app.post('/users', bcryptMiddleware.hashPassword, (req, res) => {
 
         //No error, response with userid
         else
+            crudLogger.info(`POST - users - Added User ID: ${results.insertId}`);
             res.status(201).json({ userid: results.insertId,username:username })
 
     })
@@ -273,6 +297,7 @@ app.get('/users', requireAdmin, (req, res) => {
 
         //No error, response with all user info
         else {
+            crudLogger.info(`GET - users - Found ${results.length} users`);
             res.status(200).json(results)
 
         }
@@ -290,6 +315,7 @@ app.get('/users/:id', requireAdmin, (req, res) => {
 
         //No error, response with user info
         else {
+            crudLogger.info(`GET - users/${req.params.id} - Found User ID: ${req.params.id}`);
             res.status(200).json(results[0])
 
         }
@@ -305,19 +331,24 @@ app.put('/users/:id', requireAuth, verifyToken, (req, res) => {
         if (err) {
 
             //Check if name or email is dup"
-            if (err.code == "ER_DUP_ENTRY")
+            if (err.code == "ER_DUP_ENTRY") {
+                crudLogger.warn(`PUT - users/${req.params.id} - Error: ${err.message}`);
                 res.status(422).json({ message: `The new username OR new email provided already exists.` })
-
+            }
             //Otherwise unknown error
             else
+                crudLogger.error(`PUT - users/${req.params.id} - Error: ${err.message}`);
                 res.status(500).json({ result: "Internal Error" })
 
         }
         else {
             console.log(results)
-            if (results.affectedRows < 1)
+            if (results.affectedRows < 1) {
+                crudLogger.warn(`PUT - users/${req.params.id} - Incorrect Password`);
                 res.status(400).json({ message: "Incorrect Password" })
+            }
             else
+                crudLogger.info(`PUT - users/${req.params.id} - Updated User ID: ${req.params.id}`);
                 res.status(204).end();
         }
 
@@ -336,17 +367,20 @@ app.post('/category', requireAuth, verifyToken, (req, res) => {
         if (err) {
 
             //Check if name or email is dup
-            if (err.code == "ER_DUP_ENTRY")
+            if (err.code == "ER_DUP_ENTRY") {
+                crudLogger.warn(`POST - category - Error: The category name provided already exists`);
                 res.status(422).json({ message: `The category name provided already exists` })
-
+            }
             //Otherwise unknown error
             else
+                crudLogger.error(`POST - category - Error: ${err.message}`);
                 res.status(500).json({ result: "Internal Error" })
 
         }
 
         //No error, response with userid
         else
+            crudLogger.info(`POST - category - Added Category ID: ${results.insertId}`);
             res.status(204).end();
 
     })
@@ -358,11 +392,13 @@ app.get('/category', (req, res) => {
 
     categoryDB.getAllCategory((err, results) => {
 
-        if (err)
+        if (err) {
+            crudLogger.error(`GET - category - Error: ${err.message}`);
             res.status(500).json({ result: "Internal Error" })
-
+        }
         //No error, response with all user info
         else {
+            crudLogger.info(`GET - category - Found ${results.length} categories`);
             res.status(200).json(results)
 
         }
@@ -379,11 +415,13 @@ app.post('/product', requireAuth, verifyToken, (req, res) => {
 
     productDB.addNewProduct(name, description, categoryid, brand, price, (err, results) => {
 
-        if (err)
+        if (err) {
+            crudLogger.error(`POST - product - Error: ${err.message}`);
             res.status(500).json({ result: "Internal Error" })
-
+        }
         //No error, response with productid
         else
+        crudLogger.info(`POST - product - Added Product ID: ${results.insertId}`);
             res.status(201).json({ productid: results.insertId })
 
     })
@@ -394,16 +432,19 @@ app.post('/product', requireAuth, verifyToken, (req, res) => {
 app.get('/product/:id', (req, res) => {
     const productId = parseInt(req.params.id, 10);
     if (isNaN(productId)) {
+        crudLogger.warn(`GET - product/${req.params.id} - Invalid Product ID`);
         return res.status(400).json({ message: "Invalid product ID" });
     }
 
     productDB.getProduct(req.params.id, (err, results) => {
 
-        if (err)
+        if (err) {
+            crudLogger.error(`GET - product/${req.params.id} - Error: ${err.message}`);
             res.status(500).json({ result: "Internal Error" })
-
+        }
         //No error, response with product info
         else {
+            crudLogger.info(`GET - product/${req.params.id} - Found Product ID: ${req.params.id}`);
             res.status(200).json(results)
 
         }
@@ -417,10 +458,12 @@ app.delete('/product/:id', requireAuth, verifyToken, (req, res) => {
 
     productDB.deleteProduct(req.params.id, (err, results) => {
 
-        if (err)
+        if (err) {
+            crudLogger.error(`DELETE - product/${req.params.id} - Error: ${err.message}`);
             res.status(500).json({ result: "Internal Error" })
-
+        }
         else
+            crudLogger.info(`DELETE - product/${req.params.id} - Deleted Product ID: ${req.params.id}`);
             res.status(204).end();
 
     })
@@ -435,11 +478,13 @@ app.post('/product/:id/review/', requireAuth, verifyToken, validateReviewInput, 
     const { userid, rating, review } = req.body;
     reviewDB.addReview(userid, rating, review, req.params.id, (err, results) => {
 
-        if (err)
+        if (err) {
+            crudLogger.error(`POST - product/${req.params.id}/review - Error: ${err.message}`);
             res.status(500).json({ result: "Internal Error" })
-
+        }
         //No error, response with reviewid
         else
+            crudLogger.info(`POST - product/${req.params.id}/review - Added Review ID: ${results.insertId}`);
             res.status(201).json({ reviewid: results.insertId })
 
     })
@@ -451,12 +496,14 @@ app.get('/product/:id/reviews', (req, res) => {
 
     reviewDB.getProductReview(req.params.id, (err, results) => {
 
-        if (err)
+        if (err) {
+            crudLogger.error(`GET - product/${req.params.id}/reviews - Error: ${err.message}`);
             res.status(500).json({ result: "Internal Error" })
-
+        }
         //No error, response with all user info
         else
             results = sanitizeOutput(results);
+            crudLogger.info(`GET - product/${req.params.id}/reviews - Found ${results.length} reviews`);
             res.status(200).json(results)
 
     })
@@ -477,13 +524,17 @@ app.post('/discount/:productid', requireAdmin, (req, res) => {
     discountDB.addNewDiscount(productid, discount_percentage, start_at, end_at, name, description, (err, results) => {
 
         if (err) {
-            if (err.errno == 1292 && err.sqlMessage.startsWith("Incorrect datetime"))
+            if (err.errno == 1292 && err.sqlMessage.startsWith("Incorrect datetime")) {
+                crudLogger.warn(`POST - discount/${productid} - Invalid Time`);
                 res.status(400).json({ message: "Invalid Time" })
+            }
             else
+                crudLogger.error(`POST - discount/${productid} - Error: ${err.message}`);
                 res.status(500).json({ message: "Internal Error" })
         }
 
         else
+            crudLogger.info(`POST - discount/${productid} - Added Discount ID: ${results.insertId}`);
             res.status(201).json({ discountid: results.insertId })
 
     })
@@ -495,10 +546,12 @@ app.get('/discount', (req, res) => {
 
     discountDB.getAllDiscount((err, results) => {
 
-        if (err)
+        if (err) {
+            crudLogger.error(`GET - discount - Error: ${err.message}`);
             res.status(500).json({ result: "Internal Error" })
-
+        }
         else {
+            crudLogger.info(`GET - discount - Found ${results.length} discounts`);
             res.status(200).json(results)
 
 
@@ -512,10 +565,12 @@ app.get('/discount/:id/', (req, res) => {
 
     discountDB.getProductDiscount(req.params.id, (err, results) => {
 
-        if (err)
+        if (err) {
+            crudLogger.error(`GET - discount/${req.params.id} - Error: ${err.message}`);
             res.status(500).json({ result: "Internal Error" })
-
+        }
         else
+            crudLogger.info(`GET - discount/${req.params.id} - Found Discount for Product ID: ${req.params.id}`);
             res.status(200).json(results)
 
     })
@@ -529,6 +584,7 @@ app.post('/product/:id/image', requireAuth, verifyToken, upload.single('image'),
 
     //Check if there is file
     if (req.file == undefined) {
+        crudLogger.warn(`POST - product/${req.params.id}/image - No file given`);
         res.status(422).json({ message: "No file given" })
     } else {
         const { filename: imageName, mimetype: imageType, path: imagePath, size: imageSize } = req.file;
@@ -542,6 +598,7 @@ app.post('/product/:id/image', requireAuth, verifyToken, upload.single('image'),
             //Remove file if file size too large
             fs.unlink(imagePath, (err) => { if (err) console.error(err) })
 
+            crudLogger.warn(`POST - product/${req.params.id}/image - File size too large`);
             res.status(413).json({ message: "File size too large" })
 
             //Check if the image type is correct
@@ -550,6 +607,7 @@ app.post('/product/:id/image', requireAuth, verifyToken, upload.single('image'),
             //remove file if file type is not jpeg/png/jpg
             fs.unlink(imagePath, (err) => { if (err) console.error(err) })
 
+            crudLogger.warn(`POST - product/${req.params.id}/image - Invalid file type`);
             res.status(415).json({ message: "Invalid file type" })
 
         } else
@@ -559,10 +617,12 @@ app.post('/product/:id/image', requireAuth, verifyToken, upload.single('image'),
                 if (err) {
                     //Remove picture if error occured when updating sql
                     fs.unlink(imagePath, (err) => { if (err) console.error(err) })
+                    crudLogger.error(`POST - product/${req.params.id}/image - Error: ${err.message}`);
                     res.status(500).json({ result: "Internal Error" })
                 }
 
                 else
+                    crudLogger.info(`POST - product/${req.params.id}/image - Added Image ID: ${results.insertId}`);
                     res.status(200).json({ affectedRows: results.affectedRows });
 
             })
@@ -575,10 +635,12 @@ app.get('/product/:id/image', (req, res) => {
 
     productImagesDB.getProductImage(req.params.id, (err, results) => {
 
-        if (err)
+        if (err) {
+            crudLogger.error(`GET - product/${req.params.id}/image - Error: ${err.message}`);
             res.status(500).json({ result: "Internal Error" })
-
+        }
         else
+            crudLogger.info(`GET - product/${req.params.id}/image - Found Image for Product ID: ${req.params.id}`);
             res.status(200).json(results)
 
     })
@@ -589,22 +651,27 @@ app.get('/product/cheapest/:categoryid', (req, res) => {
 
     productDB.get3CheapestFromCategory(req.params.categoryid, (err, results) => {
 
-        if (err)
+        if (err) {
+            crudLogger.error(`GET - product/cheapest/${req.params.categoryid} - Error: ${err.message}`);
             res.status(500).json({ result: "Internal Error" })
-
+        }
         else {
-            if (results.length > 0)
+            if (results.length > 0) {
+                crudLogger.info(`GET - product/cheapest/${req.params.categoryid} - Found 3 cheapest products`);
                 res.status(200).json({
                     product: results,
                     cheapestPrice: results[0].price
                 })
+            }
             else
+                crudLogger.info(`GET - product/cheapest/${req.params.categoryid} - No products found`);
                 res.status(200).json({ message: "No product" })
         }
     })
 });
 
 app.use((req, res, next) => {
+    crudLogger.warn(`404 - Not Found - URL: ${req.originalUrl}`);
     res.status(404).send('404 Not found');
 });
 
