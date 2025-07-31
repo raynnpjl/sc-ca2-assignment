@@ -7,8 +7,7 @@ BackEnd/model/databaseConfig.js
 # Ignore environment variables file
 BackEnd/.env
 
-# Ignore logs directory
-BackEnd/logs/crud.log
-BackEnd/logs/login.log
-BackEnd/logs/exceptions.log
-BackEnd/logs/rejections.log
+# Ignore all files in logs folder
+BackEnd/logs/*
+# Except .gitkeep (or any placeholder file)
+!BackEnd/logs/.gitkeep
