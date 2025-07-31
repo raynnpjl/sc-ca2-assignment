@@ -19,7 +19,7 @@ const upload = multer({ storage: storage })
 const validator = require('validator');
 const { loginLogger, crudLogger } = require('../logger.js');
 
-var userDB = require('../model/user');$
+var userDB = require('../model/user');
 const categoryDB = require('../model/category');
 const productDB = require('../model/product');
 const reviewDB = require('../model/review');

@@ -32,3 +32,7 @@
 [2025-07-30 22:42:15] INFO: GET - product/8/image - Found Image for Product ID: 8
 [2025-07-30 22:42:16] INFO: GET - discount - Found 5 discounts
 [2025-07-30 22:42:16] INFO: GET - product/8/reviews - Found 2 reviews
+[2025-07-31 09:03:31] INFO: POST - user/isloggedinRedis - User ID: 79
+[2025-07-31 09:03:31] INFO: GET - product - Found 11 products
+[2025-07-31 09:03:34] INFO: POST - user/isloggedinRedis - User ID: 79
+[2025-07-31 09:03:34] INFO: GET - product - Found 11 products

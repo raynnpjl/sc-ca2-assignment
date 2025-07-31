@@ -6,3 +6,9 @@ BackEnd/model/databaseConfig.js
 
 # Ignore environment variables file
 BackEnd/.env
+
+# Ignore logs directory
+BackEnd/logs/crud.log
+BackEnd/logs/login.log
+BackEnd/logs/exceptions.log
+BackEnd/logs/rejections.log
