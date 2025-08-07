@@ -41,8 +41,10 @@
     // hide the main content initially
     $("#container").hide();
 
+    axios.defaults.withCredentials = true;
+
     // check if user is logged in and is admin
-    axios.post(`http://localhost:8081/user/isloggedin`)
+    axios.post(`http://localhost:8081/user/isloggedinRedis`)
       .then(({ data }) => {
         const { type } = data;
 
@@ -153,7 +155,7 @@
         contentType: 'application/json',
         dataType: 'json',
         xhrFields: {
-        withCredentials: true // Include cookies like HttpOnly sessionId
+          withCredentials: true // Include cookies like HttpOnly sessionId
         },
         success: function ({ productid }) {
           axios.post(`http://localhost:8081/product/${productid}/image`, dataImage)
@@ -173,6 +175,9 @@
         },
         error: function (xhr, textStatus, errorThrown) {
           console.error(errorThrown);
+          console.error("Full error:", xhr);
+          console.error("Response:", xhr.responseJSON);
+          console.error("Status:", xhr.status);
           $("#prodAddFeedback").addClass("text-danger").html(errorThrown || "Error!");
         }
       });

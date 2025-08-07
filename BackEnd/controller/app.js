@@ -15,7 +15,12 @@ const storage = multer.diskStorage({
         cb(null, file.fieldname + '-' + uniqueSuffix + "." + extension)
     }
 })
-const upload = multer({ storage: storage })
+const upload = multer({ 
+    storage: storage,
+    limits: { 
+        fileSize: 1024 * 1024 
+    }
+});
 const validator = require('validator');
 const { loginLogger, crudLogger } = require('../logger.js');
 
@@ -409,7 +414,7 @@ app.get('/category', (req, res) => {
 //PRODUCT
 
 //Api no. 7 Endpoint: POST /product/ | Add new product
-app.post('/product', requireAuth, verifyToken, (req, res) => {
+app.post('/product', requireAdmin, (req, res) => {
 
     const { name, description, categoryid, brand, price } = req.body;
 
@@ -580,7 +585,7 @@ app.get('/discount/:id/', (req, res) => {
 //BONUS REQUIREMENT PRODUCT IMAGE
 
 //Api no. 13 Endpoint: POST /product/:id/image  | Upload product image 
-app.post('/product/:id/image', requireAuth, verifyToken, upload.single('image'), function (req, res) {
+app.post('/product/:id/image', requireAdmin, upload.single('image'), function (req, res) {
 
     //Check if there is file
     if (req.file == undefined) {
@@ -673,6 +678,16 @@ app.get('/product/cheapest/:categoryid', (req, res) => {
 app.use((req, res, next) => {
     crudLogger.warn(`404 - Not Found - URL: ${req.originalUrl}`);
     res.status(404).send('404 Not found');
+});
+
+app.use((error, req, res, next) => {
+   if (error instanceof multer.MulterError) {
+       if (error.code === 'LIMIT_FILE_SIZE') {
+           crudLogger.warn(`File size too large`);
+           return res.status(413).json({ message: "File size too large (Multer)" });
+       }
+   }
+   next(error);
 });
 
 module.exports = app;
